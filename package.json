@@ -1,0 +1,14 @@
+{
+  "name": "site-map-crawler",
+  "version": "1.0.0",
+  "description": "Small crawler to output site map and static assets",
+  "main": "crawl.js",
+  "author": "Samuel Bergeron",
+  "license": "ISC",
+  "dependencies": {
+    "URIjs": "^1.16.0",
+    "cheerio": "^0.19.0",
+    "commander": "^2.8.1",
+    "request": "^2.61.0"
+  }
+}
