@@ -27,10 +27,10 @@ var SiteMapCrawler = function(url, protocol) {
   this.uriList.push(this.initialUri.href());
 };
 
-SiteMapCrawler.prototype.fetchInitialUrl = function() {
+SiteMapCrawler.prototype.crawlUrl = function(url) {
   siteMapCrawler = this;
   var anchorList = [];
-  request(siteMapCrawler.initialUrl, function(err, res, body) {
+  request(url, function(err, res, body) {
     if (res) {
       if (res.statusCode >= 200 && res.statusCode < 300) { // Make sure we have a valid response
         if (body) {
@@ -43,11 +43,12 @@ SiteMapCrawler.prototype.fetchInitialUrl = function() {
               anchorList.push(link);
             }
           });
+          // Call our method to parse anchors and return build urls
           siteMapCrawler.updateUrlList(anchorList);
         }
       }
       else if (res.statusCode >= 400) {
-        console.log('Initial GET returned status code: ' + res.statusCode);
+        console.log('GET returned status code: ' + res.statusCode + ' for ' + url);
       }
     }
     if (err) {
@@ -93,5 +94,5 @@ if (!program.args.length) {
 
   // Make are crawler object and start the search
   crawler = new SiteMapCrawler(url, program.protocol);
-  crawler.fetchInitialUrl();
+  crawler.crawlUrl(crawler.initialUrl);
 }

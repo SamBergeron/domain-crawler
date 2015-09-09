@@ -1,10 +1,10 @@
 {
-  "name": "site-map-crawler",
+  "name": "domain-crawler",
   "version": "1.0.0",
-  "description": "Small crawler to output site map and static assets",
+  "description": "A basic crawler used to create a site index from an source url",
   "main": "crawl.js",
   "author": "Samuel Bergeron",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "URIjs": "^1.16.0",
     "cheerio": "^0.19.0",
