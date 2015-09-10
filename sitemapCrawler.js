@@ -2,6 +2,7 @@ var request = require('request'), // For making HTTP requests
     cheerio = require('cheerio'), // For parsing the DOM
     events = require('events'), // For emitters and listeners
     chalk = require('chalk'), // For coloring cli outputs
+    fs = require('fs'), // For writing to file
     URI = require('URIjs'); // For using URIs as objects
 
 var SiteMapCrawler = function(url, protocol, timeout) {
@@ -119,16 +120,42 @@ SiteMapCrawler.prototype.proccessQueue = function(startUrl) {
       siteMapCrawler.crawlUrl(next);
       console.log('Crawling ' + next);
     } else { // If the queue is empty we're done crawling
-      console.log('Done!');
-      console.log('The crawler found ' + siteMapCrawler.uriList.length + ' unique urls');
-      console.log(siteMapCrawler.invalidLinkCount + ' invalid links were also found');
+      siteMapCrawler.eventEmitter.emit('queueProccessed');
     }
   });
+
 };
 
-SiteMapCrawler.prototype.printFinalUrlList = function() {
-  var finalList = this.uriList;
-  console.log(finalList.sort());
+SiteMapCrawler.prototype.printFinalUrlList = function(output) {
+  siteMapCrawler = this;
+
+  siteMapCrawler.eventEmitter.on('queueProccessed', function() {
+    console.log(chalk.cyan('Done!'));
+    console.log(chalk.bold.green('The crawler found %s unique urls'), siteMapCrawler.uriList.length);
+    console.log(chalk.bold.yellow('%s invalid links were found'), siteMapCrawler.invalidLinkCount);
+
+    var finalList = siteMapCrawler.uriList.sort();
+    var outputFile = output || "results.txt";
+
+    // Create the file, crushes old one
+    fs.writeFile(outputFile, '', function() {
+      if(siteMapCrawler.info) {
+        console.log(chalk.cyan(outputFile + ' has been created'));
+      }
+    });
+
+    for(var i=0; i < finalList.length; i++){
+      var link = URI(finalList[i]).resource();
+      if(outputFile) {
+        // Save results to file
+        fs.appendFileSync(outputFile, link + '\n');
+      }
+      // Log output to console if specified
+      if(siteMapCrawler.info) {
+        console.log(link);
+      }
+    }
+  });
 };
 
 module.exports = SiteMapCrawler;

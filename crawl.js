@@ -7,9 +7,9 @@ var path = require('path'),
 
 program
   .version(pkg.version)
-  .usage('[options] <url>')
+  .usage('[options] <url> <outputFile>')
   .option('-p, --protocol [protocol]', 'Specify the protocol to be used for requests, defaults to http', /^(http|https)$/i, 'http')
-  .option('-i, --info', 'Print info on non valid urls (like 404 errors)')
+  .option('-i, --info', 'Print info on non valid urls (like 404 errors), and output to console')
   .option('-t, --timeout <t>', 'Specify the timeout to use for all requests in ms, defaults to 3s')
   .parse(process.argv);
 
@@ -17,6 +17,7 @@ if (!program.args.length) {
   program.help();
 } else {
   var url = program.args[0];
+  var outputFile = program.args[1];
   console.log('Start url is: ' + url);
   console.log('Protocol being used is: ' + program.protocol);
 
@@ -24,4 +25,5 @@ if (!program.args.length) {
   crawler = new SiteMapCrawler(url, program.protocol, program.timeout);
   crawler.setInfoLevel(program.info);
   crawler.proccessQueue(crawler.initialUrl);
+  crawler.printFinalUrlList(outputFile);
 }
