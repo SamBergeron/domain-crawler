@@ -4,7 +4,7 @@
 #### Usage:
 - Download files, make sure nodeJS is installed
 - run "npm install"
-- run "node crawl.js [url]"
+- run "node crawl.js [url] [outputfile]"
 - run "node crawl.js --help" for options
 
 #### Where this came from
@@ -33,9 +33,9 @@ First off, I tried to make this application as simple and as straight-forward as
 ####__crawlUrl__
  - Takes a URL, sends a GET request and waits for the response
  - Upon response, takes into consideration the status code (we keep valid responses and throw away 404s and the like)
- - Parses the body of the response to extract all references from the anchor tags; the _href_ in `<a href="/foo"></a>` 
+ - Parses the body of the response to extract all references from the anchor tags; the _href_ in `<a href="/foo"></a>`
  - Passes the list of anchors to __updateUrlList__
- - Emits a _urlProccessed_ event when it is done handling a URL, which tells __proccessQueue__ that we can start a new crawl 
+ - Emits a _urlProccessed_ event when it is done handling a URL, which tells __proccessQueue__ that we can start a new crawl
 
 ####__updateUrlList__
  - This function mainly does two things; Clean the links so they are standardized, and add them to our queue
