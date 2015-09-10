@@ -11,11 +11,14 @@ program
   .version(pkg.version)
   .usage('[options] <url>')
   .option('-p, --protocol [protocol]', 'Specify the protocol to be used for requests, defaults to http', /^(http|https)$/i, 'http')
+  .option('-i, --info', 'Print info on non valid urls (like 404 errors)')
+  .option('-t, --timeout <t>', 'Specify the timeout to use for all requests in ms, defaults to 3s')
   .parse(process.argv);
 
 var SiteMapCrawler = function(url, protocol) {
   this.initialUrl = url;
   this.protocol = protocol;
+  this.timeout = program.timeout || 3000; // 3 seconds
   this.uriList = [];
 
   // Normalize the protocol and removing trailing hashes
@@ -30,7 +33,13 @@ var SiteMapCrawler = function(url, protocol) {
 SiteMapCrawler.prototype.crawlUrl = function(url) {
   siteMapCrawler = this;
   var anchorList = [];
-  request(url, function(err, res, body) {
+  var nextCrawlList = [];
+  var options = {
+    url: url,
+    timeout: siteMapCrawler.timeout
+  };
+
+  request(options, function(err, res, body) {
     if (res) {
       if (res.statusCode >= 200 && res.statusCode < 300) { // Make sure we have a valid response
         if (body) {
@@ -43,32 +52,48 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
               anchorList.push(link);
             }
           });
+          // Returns the uri of the request, if we were redirected
+          var requestUri = res.request.uri.href;
           // Call our method to parse anchors and return build urls
-          siteMapCrawler.updateUrlList(anchorList);
+          nextCrawlList = siteMapCrawler.updateUrlList(anchorList, requestUri);
+
+          // If we have new un-crawled urls
+          if(nextCrawlList && nextCrawlList.length > 0) {
+            for(var i=0; i < nextCrawlList.length; i++) {
+              // Parse all the new urls
+              siteMapCrawler.crawlUrl(nextCrawlList[i]);
+            }
+          }
         }
       }
       else if (res.statusCode >= 400) {
-        console.log('GET returned status code: ' + res.statusCode + ' for ' + url);
+        if (program.info) { // If the info option was specified
+          console.info('GET returned status code: ' + res.statusCode + ' for ' + url);
+        }
       }
     }
-    if (err) {
-      // Something went wrong with the request
-      console.log(err);
-    }
+    // if (err) {
+    //   // Something went wrong with the request
+    //   console.log(err);
+    //   return;
+    // }
   });
 };
 
-SiteMapCrawler.prototype.updateUrlList = function(anchorList) {
+SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl) {
   siteMapCrawler = this;
+  var urlsToCrawl = [];
   for(var i=0; i < anchorList.length; i++) {
     // Make new URIs from our anchor list
     var tempUri = URI(anchorList[i]);
+    // Remove any trailing query strings
+    tempUri = tempUri.search("");
     // Remove any trailing hashes
     tempUri = tempUri.fragment("");
 
     if (tempUri.is('relative')) {
       // Append our relative uri to our main one
-      tempUri = siteMapCrawler.initialUri.directory(tempUri.href());
+      tempUri = URI(originUrl).pathname(tempUri.href());
     }
 
     //Normalize the protocol
@@ -79,10 +104,19 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList) {
       // Then add to our uri list
       if(siteMapCrawler.uriList.indexOf(tempUri.href()) === -1) {
         siteMapCrawler.uriList.push(tempUri.href());
+        // We push all the new urls to a list we will return and recurse on
+        urlsToCrawl.push(tempUri.href());
       }
     }
   }
-  console.log(siteMapCrawler.uriList);
+  //console.log(siteMapCrawler.uriList); // debug
+  //console.log(urlsToCrawl.length);
+  return(urlsToCrawl);
+};
+
+SiteMapCrawler.prototype.printFinalUrlList = function() {
+  var finalList = this.uriList;
+  console.log(finalList.sort());
 };
 
 if (!program.args.length) {
