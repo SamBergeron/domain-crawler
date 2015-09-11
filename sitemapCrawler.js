@@ -21,8 +21,6 @@ var SiteMapCrawler = function(url, protocol, timeout) {
   this.domain = this.initialUri.domain();
 
   console.log('Domain crawled is: ' + this.domain);
-
-  this.uriList.push(this.initialUri.href());
 };
 
 SiteMapCrawler.prototype.setInfoLevel = function(info) {
@@ -60,9 +58,7 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
         }
       }
       else if (res.statusCode >= 400) {
-        if (siteMapCrawler.info) { // If the info option was specified
-          console.info(chalk.bold.yellow('GET returned status code: %s for %s'), res.statusCode, url);
-        }
+        console.log(chalk.bold.yellow('GET returned status code: %s for %s'), res.statusCode, url);
         siteMapCrawler.invalidLinkCount++;
       }
     }
@@ -90,8 +86,16 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl) {
       tempUri = URI(originUrl).pathname(tempUri.href());
     }
 
+    // Normalize the subdomain if not specified
+    if(tempUri.subdomain() === '') {
+      tempUri = tempUri.subdomain('www');
+    }
+
     // Normalize the protocol
     tempUri = tempUri.protocol(siteMapCrawler.protocol);
+
+    // Remove caps and/or trailing slashes
+    tempUri = tempUri.normalize();
 
     // Verify we are in the same domain
     if(tempUri.domain() === siteMapCrawler.domain) {
@@ -144,15 +148,15 @@ SiteMapCrawler.prototype.printFinalUrlList = function(output) {
       }
     });
 
-    for(var i=0; i < finalList.length; i++){
-      var link = URI(finalList[i]).resource();
+    for(var i=0; i < finalList.length; i++) {
+      var link = URI(finalList[i]);
       if(outputFile) {
         // Save results to file
-        fs.appendFileSync(outputFile, link + '\n');
+        fs.appendFileSync(outputFile, link.href() + '\n');
       }
       // Log output to console if specified
       if(siteMapCrawler.info) {
-        console.log(link);
+        console.log(link.href());
       }
     }
   });
