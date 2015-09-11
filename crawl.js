@@ -9,7 +9,7 @@ program
   .version(pkg.version)
   .usage('[options] <url> <outputFile>')
   .option('-p, --protocol [protocol]', 'Specify the protocol to be used for requests, defaults to http', /^(http|https)$/i, 'http')
-  .option('-i, --info', 'Print info on non valid urls (like 404 errors), and output to console')
+  .option('-i, --info', 'Output crawl info to console')
   .option('-t, --timeout <t>', 'Specify the timeout to use for all requests in ms, defaults to 3s')
   .parse(process.argv);
 

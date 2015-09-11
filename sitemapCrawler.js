@@ -36,8 +36,14 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
     timeout: siteMapCrawler.timeout,
   };
 
+  // Log what site we are crawling on -i option
+  if(siteMapCrawler.info) {
+    console.log('Crawling ' + url);
+  // Otherwise mark our action (for console visual aid)
+  } else { process.stdout.write('.'); }
+
   var req = request(options, function(err, res, body) {
-    process.stdout.write('.');
+
     if (res) {
       if (res.statusCode >= 200 && res.statusCode < 300) { // Make sure we have a valid response
         if (body) {
@@ -131,8 +137,7 @@ SiteMapCrawler.prototype.proccessQueue = function(startUrl) {
     // Start a new crawl with the first element of the queue
     var next = queue.shift();
     if(next) {
-      // siteMapCrawler.crawlUrl(next);
-      // console.log('Crawling ' + next);
+      // Still has stuff to do
     } else { // If the queue is empty we're done crawling
       siteMapCrawler.eventEmitter.emit('queueProccessed');
     }
@@ -160,10 +165,6 @@ SiteMapCrawler.prototype.printFinalUrlList = function(output) {
       if(outputFile) {
         // Save results to file
         fs.appendFileSync(outputFile, link.href() + '\n');
-      }
-      // Log output to console if specified
-      if(siteMapCrawler.info) {
-        console.log(link.href());
       }
     }
 
