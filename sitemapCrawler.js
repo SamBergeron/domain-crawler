@@ -94,7 +94,7 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl) {
     // Normalize the protocol
     tempUri = tempUri.protocol(siteMapCrawler.protocol);
 
-    // Remove caps and/or trailing slashes
+    // Remove irregularities in URL (like capital letters)
     tempUri = tempUri.normalize();
 
     // Verify we are in the same domain
