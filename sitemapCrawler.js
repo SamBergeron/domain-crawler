@@ -5,22 +5,22 @@ var request = require('request'), // For making HTTP requests
     fs = require('fs'), // For writing to file
     URI = require('URIjs'); // For using URIs as objects
 
-var SiteMapCrawler = function(url, protocol, timeout) {
+var SiteMapCrawler = function(url, protocol, timeout, outputFile) {
   this.eventEmitter = new events.EventEmitter();
 
   this.initialUrl = url;
   this.protocol = protocol;
-  this.timeout = timeout || 3000; // 3 seconds
+  this.timeout = parseInt(timeout) || 3000; // 3 seconds
 
   this.uriList = [];
   this.uriQueue = [];
   this.invalidLinkCount = 0;
 
-  // Normalize the protocol and remove trailing hashes
-  this.initialUri = new URI(url).protocol(protocol).fragment('');
-  this.domain = this.initialUri.domain();
-
+  this.domain = new URI(url).domain();
   console.log('Domain crawled is: ' + this.domain);
+
+  // Initialize our listener
+  this.printFinalUrlList(outputFile);
 };
 
 SiteMapCrawler.prototype.setInfoLevel = function(info) {
@@ -31,11 +31,13 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
   siteMapCrawler = this;
   var anchorList = [];
   var options = {
+    method: 'GET',
     url: url,
-    timeout: siteMapCrawler.timeout
+    timeout: siteMapCrawler.timeout,
   };
 
-  request(options, function(err, res, body) {
+  var req = request(options, function(err, res, body) {
+    process.stdout.write('.');
     if (res) {
       if (res.statusCode >= 200 && res.statusCode < 300) { // Make sure we have a valid response
         if (body) {
@@ -58,16 +60,23 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
         }
       }
       else if (res.statusCode >= 400) {
-        console.log(chalk.bold.yellow('GET returned status code: %s for %s'), res.statusCode, url);
+        console.log(chalk.bold.yellow('\nGET returned status code: %s for %s'), res.statusCode, url);
         siteMapCrawler.invalidLinkCount++;
       }
+      siteMapCrawler.eventEmitter.emit('urlProccessed', url);
     }
+    // Something went wrong with the request
     if (err) {
-      // Something went wrong with the request
-      // We'll log so node doesn't throw and exit
-      console.log(chalk.red(err));
+      // Retry if this was a read error on our part
+      // This happens because we're pooling through our connections too fast
+      if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
+        siteMapCrawler.crawlUrl(url);
+      } else {
+        // The url actually doesn't work, take it out of the queue
+        console.log(chalk.red('\n' + err));
+        siteMapCrawler.eventEmitter.emit('urlProccessed', url);
+      }
     }
-    siteMapCrawler.eventEmitter.emit('urlProccessed', url);
   });
 };
 
@@ -104,6 +113,7 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl) {
         siteMapCrawler.uriList.push(tempUri.href());
         // Add our uris to the queue
         siteMapCrawler.uriQueue.push(tempUri.href());
+        siteMapCrawler.crawlUrl(tempUri.href());
       }
     }
   }
@@ -121,8 +131,8 @@ SiteMapCrawler.prototype.proccessQueue = function(startUrl) {
     // Start a new crawl with the first element of the queue
     var next = queue.shift();
     if(next) {
-      siteMapCrawler.crawlUrl(next);
-      console.log('Crawling ' + next);
+      // siteMapCrawler.crawlUrl(next);
+      // console.log('Crawling ' + next);
     } else { // If the queue is empty we're done crawling
       siteMapCrawler.eventEmitter.emit('queueProccessed');
     }
@@ -134,7 +144,7 @@ SiteMapCrawler.prototype.printFinalUrlList = function(output) {
   siteMapCrawler = this;
 
   siteMapCrawler.eventEmitter.on('queueProccessed', function() {
-    console.log(chalk.cyan('Done!'));
+    console.log(chalk.cyan('\nDone!'));
     console.log(chalk.bold.green('The crawler found %s unique urls'), siteMapCrawler.uriList.length);
     console.log(chalk.bold.yellow('%s invalid links were found'), siteMapCrawler.invalidLinkCount);
 
@@ -142,11 +152,8 @@ SiteMapCrawler.prototype.printFinalUrlList = function(output) {
     var outputFile = output || "results.txt";
 
     // Create the file, crushes old one
-    fs.writeFile(outputFile, '', function() {
-      if(siteMapCrawler.info) {
-        console.log(chalk.cyan(outputFile + ' has been created'));
-      }
-    });
+    fs.writeFileSync(outputFile, '');
+    console.log(chalk.cyan(outputFile + ' has been created'));
 
     for(var i=0; i < finalList.length; i++) {
       var link = URI(finalList[i]);
@@ -159,6 +166,10 @@ SiteMapCrawler.prototype.printFinalUrlList = function(output) {
         console.log(link.href());
       }
     }
+
+    // We're done here
+    process.exit(0);
+
   });
 };
 

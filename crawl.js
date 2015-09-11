@@ -22,8 +22,7 @@ if (!program.args.length) {
   console.log('Protocol being used is: ' + program.protocol);
 
   // Make are crawler object and start the search
-  crawler = new SiteMapCrawler(url, program.protocol, program.timeout);
+  crawler = new SiteMapCrawler(url, program.protocol, program.timeout, outputFile);
   crawler.setInfoLevel(program.info);
   crawler.proccessQueue(crawler.initialUrl);
-  crawler.printFinalUrlList(outputFile);
 }
