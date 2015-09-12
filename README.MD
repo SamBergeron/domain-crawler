@@ -43,12 +43,14 @@ First off, I tried to make this application as simple and as straight-forward as
  - Removes any trailing hashes for page anchors ("/about#somewhere-on-the-same-page")
  - Removes URL queries ("/about?someQuery=foo&another=bar")
  - Removes URLs that are not in the same domain
- - Adds the clean URLs to the queue if we have not seen them before
+ - Checks if the new URLs aren't already proccessed
+ - Adds them to a queue of URLs
+ - Starts a new crawl for each new URL found this way
 
 ####__proccessQueue__
  - This is the start point of the crawl, it calls the first crawl
  - Listens for any _urlProccessed_ events
- - When an event is emitted, it pops the first element of the queue and sends it to be crawled
+ - When this event is emitted it removes the crawled URL from the queue
  - When our queue is empty, it prints the site map
 
 ### Considerations
