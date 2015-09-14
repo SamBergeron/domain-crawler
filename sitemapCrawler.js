@@ -11,9 +11,11 @@ var SiteMapCrawler = function(url, protocol, timeout, outputFile) {
   this.initialUrl = url;
   this.protocol = protocol;
   this.timeout = parseInt(timeout) || 3000; // 3 seconds
+  this.retries = 5;
 
   this.uriList = [];
   this.uriQueue = [];
+  this.retryList = [];
   this.invalidLinkCount = 0;
 
   this.domain = new URI(url).domain();
@@ -25,6 +27,10 @@ var SiteMapCrawler = function(url, protocol, timeout, outputFile) {
 
 SiteMapCrawler.prototype.setInfoLevel = function(info) {
   this.info = info;
+};
+
+SiteMapCrawler.prototype.setRetries = function(retry) {
+  this.retries = retry;
 };
 
 SiteMapCrawler.prototype.crawlUrl = function(url) {
@@ -76,7 +82,38 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
       // Retry if this was a read error on our part
       // This happens because we're pooling through our connections too fast
       if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
+        var retryList = siteMapCrawler.retryList;
+        var retriedLink = {};
+        var isFound = false;
+
+        // console.log(chalk.cyan("ETIMEDOUT occured"));
+
+        for(var i=0; i < retryList.length; i++){
+          if(retryList[i].url === url) {
+            isFound = true;
+            retryList[i].try++;
+            retriedLink = retryList[i];
+          }
+        }
+
+        if(isFound === true) {
+          if(retriedLink.try > siteMapCrawler.retries) {
+            console.log(chalk.bold.yellow('\nRetries exceeded for %s'), url);
+            siteMapCrawler.eventEmitter.emit('urlProccessed', url);
+            return; // Because we don't want to start a new crawl
+          }
+        } else {
+          // Make a retry link
+          retriedLink = {
+            url: url,
+            try: 1
+          };
+
+          // Add link to list of retried url
+          siteMapCrawler.retryList.push(retriedLink);
+        }
         siteMapCrawler.crawlUrl(url);
+
       } else {
         // The url actually doesn't work, take it out of the queue
         console.log(chalk.red('\n' + err));
@@ -170,8 +207,13 @@ SiteMapCrawler.prototype.printFinalUrlList = function(output) {
 
     // We're done here
     process.exit(0);
-
   });
+
+  // on SIGINT event, print what we found
+  process.on('SIGINT', function() {
+    siteMapCrawler.eventEmitter.emit('queueProccessed');
+  });
+
 };
 
 module.exports = SiteMapCrawler;

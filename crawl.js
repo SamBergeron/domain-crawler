@@ -11,6 +11,7 @@ program
   .option('-p, --protocol [protocol]', 'Specify the protocol to be used for requests, defaults to http', /^(http|https)$/i, 'http')
   .option('-i, --info', 'Output crawl info to console')
   .option('-t, --timeout <t>', 'Specify the timeout to use for all requests in ms, defaults to 3s')
+  .option('-r, --retries <r>', 'Specify the number of times the program retries a failing request, defaults to 5')
   .parse(process.argv);
 
 if (!program.args.length) {
@@ -24,5 +25,6 @@ if (!program.args.length) {
   // Make are crawler object and start the search
   crawler = new SiteMapCrawler(url, program.protocol, program.timeout, outputFile);
   crawler.setInfoLevel(program.info);
+  crawler.setRetries(program.retries);
   crawler.proccessQueue(crawler.initialUrl);
 }
