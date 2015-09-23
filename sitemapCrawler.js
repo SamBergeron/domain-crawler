@@ -70,7 +70,10 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
             var img = $(elem).attr('src');
             // Make sure the link exists and is not already in our list
             if (img && imgList.indexOf(img) === -1) {
-              imgList.push(img);
+              // Keep only images on our own domain
+              var imgUri = URI(img);
+              if(imgUri.is('relative'))
+                imgList.push(img);
             }
           });
 
