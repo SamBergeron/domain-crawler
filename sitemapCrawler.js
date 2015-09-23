@@ -15,6 +15,7 @@ var SiteMapCrawler = function(url, protocol, timeout, outputFile) {
 
   this.uriList = [];
   this.uriQueue = [];
+  this.uriAssetsList = [];
   this.retryList = [];
   this.invalidLinkCount = 0;
 
@@ -36,6 +37,7 @@ SiteMapCrawler.prototype.setRetries = function(retry) {
 SiteMapCrawler.prototype.crawlUrl = function(url) {
   siteMapCrawler = this;
   var anchorList = [];
+  var imgList = [];
   var options = {
     method: 'GET',
     url: url,
@@ -66,10 +68,9 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
           // Do the same for all image links
           $('img').each( function(i, elem) {
             var img = $(elem).attr('src');
-            var imgList = [];
             // Make sure the link exists and is not already in our list
             if (img && imgList.indexOf(img) === -1) {
-              anchorList.push(img);
+              imgList.push(img);
             }
           });
 
@@ -79,7 +80,7 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
           // This is useful if we were redirected
           var requestUri = res.request.uri.href;
           // Call our method to parse the anchors
-          siteMapCrawler.updateUrlList(anchorList, requestUri);
+          siteMapCrawler.updateUrlList(anchorList, requestUri, imgList);
 
         }
       }
@@ -135,7 +136,7 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
   });
 };
 
-SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl) {
+SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl, assetList) {
   siteMapCrawler = this;
   for(var i=0; i < anchorList.length; i++) {
     // Make new URIs from our anchor list
@@ -168,6 +169,14 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl) {
       if(siteMapCrawler.uriList.indexOf(tempUri.href()) === -1) {
         // Then add to our uri list
         siteMapCrawler.uriList.push(tempUri.href());
+
+        // Make a new object we will save for priting later
+        var uriAndAssets = {
+          url: tempUri.href(),
+          assets: assetList
+        };
+        siteMapCrawler.uriAssetsList.push(uriAndAssets);
+
         // Add our uris to the queue
         siteMapCrawler.uriQueue.push(tempUri.href());
         siteMapCrawler.crawlUrl(tempUri.href());
@@ -211,11 +220,23 @@ SiteMapCrawler.prototype.printFinalUrlList = function(output) {
     fs.writeFileSync(outputFile, '');
     console.log(chalk.cyan(outputFile + ' has been created'));
 
-    for(var i=0; i < finalList.length; i++) {
-      var link = URI(finalList[i]);
-      if(outputFile) {
-        // Save results to file
-        fs.appendFileSync(outputFile, link.href() + '\n');
+    if (outputFile) {
+      for(var i=0; i < finalList.length; i++) {
+        var link = finalList[i];
+
+        // Find this list in the list with assets and print it
+        for (var j=0; j < siteMapCrawler.uriAssetsList.length; j++) {
+          if(siteMapCrawler.uriAssetsList[j].url === finalList[i]) {
+            fs.appendFileSync(outputFile, link + '\n');
+
+            // Print all of the assets for this link
+            var linkAssets = siteMapCrawler.uriAssetsList[j].assets;
+            for(var k=0; k < linkAssets.length; k++) {
+              fs.appendFileSync(outputFile, '\t' + linkAssets[k] + '\n');
+            }
+
+          }
+        }
       }
     }
 
