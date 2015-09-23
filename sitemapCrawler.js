@@ -35,7 +35,7 @@ SiteMapCrawler.prototype.setRetries = function(retry) {
 };
 
 SiteMapCrawler.prototype.crawlUrl = function(url) {
-  siteMapCrawler = this;
+  var siteMapCrawler = this;
   var anchorList = [];
   var imgList = [];
   var options = {
@@ -52,15 +52,15 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
 
   var req = request(options, function(err, res, body) {
 
-    if (res) {
-      if (res.statusCode >= 200 && res.statusCode < 300) { // Make sure we have a valid response
-        if (body) {
+    if(res) {
+      if(res.statusCode >= 200 && res.statusCode < 300) { // Make sure we have a valid response
+        if(body) {
           var $ = cheerio.load(body);  //Let's use JQuery selectors
           $('a').each( function(i, elem) { // Loop over anchor tags in our body
             var link = $(elem).attr('href'); // Extract the link
 
             // Make sure the link exists and is not already in our list
-            if (link && anchorList.indexOf(link) === -1) {
+            if(link && anchorList.indexOf(link) === -1) {
               anchorList.push(link);
             }
           });
@@ -69,7 +69,7 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
           $('img').each( function(i, elem) {
             var img = $(elem).attr('src');
             // Make sure the link exists and is not already in our list
-            if (img && imgList.indexOf(img) === -1) {
+            if(img && imgList.indexOf(img) === -1) {
               // Keep only images on our own domain
               var imgUri = URI(img);
               if(imgUri.is('relative'))
@@ -87,17 +87,17 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
 
         }
       }
-      else if (res.statusCode >= 400) {
+      else if(res.statusCode >= 400) {
         console.log(chalk.bold.yellow('\nGET returned status code: %s for %s'), res.statusCode, url);
         siteMapCrawler.invalidLinkCount++;
       }
       siteMapCrawler.eventEmitter.emit('urlProccessed', url);
     }
     // Something went wrong with the request
-    if (err) {
+    if(err) {
       // Retry if this was a read error on our part
       // This happens because we're pooling through our connections too fast
-      if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
+      if(err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
         var retryList = siteMapCrawler.retryList;
         var retriedLink = {};
         var isFound = false;
@@ -140,7 +140,7 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
 };
 
 SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl, assetList) {
-  siteMapCrawler = this;
+  var siteMapCrawler = this;
   for(var i=0; i < anchorList.length; i++) {
     // Make new URIs from our anchor list
     var tempUri = URI(anchorList[i]);
@@ -149,7 +149,7 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl, assetLi
     // Remove any trailing hashes
     tempUri = tempUri.fragment("");
 
-    if (tempUri.is('relative')) { // Ex: Relative would be "/about"
+    if(tempUri.is('relative')) { // Ex: Relative would be "/about"
       // Append our relative uri to our main one
       var encodedPath = URI(tempUri.href()).pathname(true);
       tempUri = URI(originUrl).pathname(encodedPath);
@@ -190,7 +190,7 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl, assetLi
 };
 
 SiteMapCrawler.prototype.proccessQueue = function(startUrl) {
-  siteMapCrawler = this;
+  var siteMapCrawler = this;
   var queue = siteMapCrawler.uriQueue;
   // Initial run
   siteMapCrawler.crawlUrl(startUrl);
@@ -209,7 +209,7 @@ SiteMapCrawler.prototype.proccessQueue = function(startUrl) {
 };
 
 SiteMapCrawler.prototype.printFinalUrlList = function(output) {
-  siteMapCrawler = this;
+  var siteMapCrawler = this;
 
   siteMapCrawler.eventEmitter.on('queueProccessed', function() {
     console.log(chalk.cyan('\nDone!'));
@@ -223,7 +223,7 @@ SiteMapCrawler.prototype.printFinalUrlList = function(output) {
     fs.writeFileSync(outputFile, '');
     console.log(chalk.cyan(outputFile + ' has been created'));
 
-    if (outputFile) {
+    if(outputFile) {
       for(var i=0; i < finalList.length; i++) {
         var link = finalList[i];
 
