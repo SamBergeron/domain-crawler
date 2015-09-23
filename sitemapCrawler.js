@@ -63,6 +63,18 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
             }
           });
 
+          // Do the same for all image links
+          $('img').each( function(i, elem) {
+            var img = $(elem).attr('src');
+            var imgList = [];
+            // Make sure the link exists and is not already in our list
+            if (img && imgList.indexOf(img) === -1) {
+              anchorList.push(img);
+            }
+          });
+
+          // Find static css and js files the same way
+
           // Get the uri from the origin of the response
           // This is useful if we were redirected
           var requestUri = res.request.uri.href;
@@ -135,7 +147,8 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl) {
 
     if (tempUri.is('relative')) { // Ex: Relative would be "/about"
       // Append our relative uri to our main one
-      tempUri = URI(originUrl).pathname(tempUri.href());
+      var encodedPath = URI(tempUri.href()).pathname(true);
+      tempUri = URI(originUrl).pathname(encodedPath);
     }
 
     // Normalize the subdomain if not specified
@@ -148,6 +161,7 @@ SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl) {
 
     // Remove irregularities in URL (like capital letters)
     tempUri = tempUri.normalize();
+    //tempUri = tempUri.encode();
 
     // Verify we are in the same domain
     if(tempUri.domain() === siteMapCrawler.domain) {
