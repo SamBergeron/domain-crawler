@@ -36,8 +36,6 @@ SiteMapCrawler.prototype.setRetries = function(retry) {
 
 SiteMapCrawler.prototype.crawlUrl = function(url) {
   var siteMapCrawler = this;
-  var anchorList = [];
-  var imgList = [];
   var options = {
     method: 'GET',
     url: url,
@@ -53,83 +51,28 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
   var req = request(options, function(err, res, body) {
 
     if(res) {
-      if(res.statusCode >= 200 && res.statusCode < 300) { // Make sure we have a valid response
+      // Make sure we have a valid response
+      if(res.statusCode >= 200 && res.statusCode < 300) {
         if(body) {
-          var $ = cheerio.load(body);  //Let's use JQuery selectors
-          $('a').each( function(i, elem) { // Loop over anchor tags in our body
-            var link = $(elem).attr('href'); // Extract the link
-
-            // Make sure the link exists and is not already in our list
-            if(link && anchorList.indexOf(link) === -1) {
-              anchorList.push(link);
-            }
-          });
-
-          // Do the same for all image links
-          $('img').each( function(i, elem) {
-            var img = $(elem).attr('src');
-            // Make sure the link exists and is not already in our list
-            if(img && imgList.indexOf(img) === -1) {
-              // Keep only images on our own domain
-              var imgUri = URI(img);
-              if(imgUri.is('relative'))
-                imgList.push(img);
-            }
-          });
-
-          // Find static css and js files the same way
-
-          // Get the uri from the origin of the response
-          // This is useful if we were redirected
-          var requestUri = res.request.uri.href;
-          // Call our method to parse the anchors
-          siteMapCrawler.updateUrlList(anchorList, requestUri, imgList);
-
+          // We have a valid body parse it's contents for linkAsset
+          siteMapCrawler.parseHtmlContent(res, body);
         }
       }
       else if(res.statusCode >= 400) {
+        // Some kind of html error
         console.log(chalk.bold.yellow('\nGET returned status code: %s for %s'), res.statusCode, url);
         siteMapCrawler.invalidLinkCount++;
       }
+      // We've had our response for this url, it's now done processing
       siteMapCrawler.eventEmitter.emit('urlProccessed', url);
     }
+
     // Something went wrong with the request
     if(err) {
       // Retry if this was a read error on our part
       // This happens because we're pooling through our connections too fast
       if(err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
-        var retryList = siteMapCrawler.retryList;
-        var retriedLink = {};
-        var isFound = false;
-
-        // console.log(chalk.cyan("ETIMEDOUT occured"));
-
-        for(var i=0; i < retryList.length; i++){
-          if(retryList[i].url === url) {
-            isFound = true;
-            retryList[i].try++;
-            retriedLink = retryList[i];
-          }
-        }
-
-        if(isFound === true) {
-          if(retriedLink.try > siteMapCrawler.retries) {
-            console.log(chalk.bold.yellow('\nRetries exceeded for %s'), url);
-            siteMapCrawler.eventEmitter.emit('urlProccessed', url);
-            return; // Because we don't want to start a new crawl
-          }
-        } else {
-          // Make a retry link
-          retriedLink = {
-            url: url,
-            try: 1
-          };
-
-          // Add link to list of retried url
-          siteMapCrawler.retryList.push(retriedLink);
-        }
-        siteMapCrawler.crawlUrl(url);
-
+        siteMapCrawler.retryLink(url);
       } else {
         // The url actually doesn't work, take it out of the queue
         console.log(chalk.red('\n' + err));
@@ -137,6 +80,77 @@ SiteMapCrawler.prototype.crawlUrl = function(url) {
       }
     }
   });
+};
+
+SiteMapCrawler.prototype.parseHtmlContent = function(res, body) {
+  var siteMapCrawler = this;
+  var anchorList = [];
+  var imgList = [];
+  var $ = cheerio.load(body);  //Let's use JQuery selectors
+
+  // Loop over anchor tags in our body
+  $('a').each( function(i, elem) {
+    var link = $(elem).attr('href'); // Extract the link
+
+    // Make sure the link exists and is not already in our list
+    if(link && anchorList.indexOf(link) === -1) {
+      anchorList.push(link);
+    }
+  });
+
+  // Do the same for all image links
+  $('img').each( function(i, elem) {
+    var img = $(elem).attr('src');
+    // Make sure the link exists and is not already in our list
+    if(img && imgList.indexOf(img) === -1) {
+      // Keep only images on our own domain
+      var imgUri = URI(img);
+      if(imgUri.is('relative'))
+        imgList.push(img);
+    }
+  });
+
+  // Get the uri from the origin of the response
+  // This is useful if we were redirected
+  var requestUri = res.request.uri.href;
+  // Call our method to parse the anchors
+  siteMapCrawler.updateUrlList(anchorList, requestUri, imgList);
+
+};
+
+SiteMapCrawler.prototype.retryLink = function(url) {
+  var siteMapCrawler = this;
+  var retryList = siteMapCrawler.retryList;
+  var retriedLink = {};
+  var isFound = false;
+
+  // Check if we've already retried our url once
+  for(var i=0; i < retryList.length; i++){
+    // If yes increment retry count
+    if(retryList[i].url === url) {
+      isFound = true;
+      retryList[i].try++;
+      retriedLink = retryList[i];
+    }
+  }
+
+  // If we have exceeded our retry limit, forget about this url
+  if(isFound === true && retriedLink.try > siteMapCrawler.retries) {
+      console.log(chalk.bold.yellow('\nRetries exceeded for %s'), url);
+      siteMapCrawler.eventEmitter.emit('urlProccessed', url);
+      return; // Because we don't want to start a new crawl
+  } else {
+    // Make a retry link
+    retriedLink = {
+      url: url,
+      try: 1
+    };
+
+    // Add link to list of retried url
+    siteMapCrawler.retryList.push(retriedLink);
+  }
+  // Retry the crawl
+  siteMapCrawler.crawlUrl(url);
 };
 
 SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl, assetList) {
