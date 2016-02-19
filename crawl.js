@@ -10,6 +10,7 @@ program
   .usage('[options] <url> <outputFile>')
   .option('-p, --protocol [protocol]', 'Specify the protocol to be used for requests, defaults to http', /^(http|https)$/i, 'http')
   .option('-i, --info', 'Output crawl info to console')
+  .option('-I, --images','Output image endpoints')
   .option('-t, --timeout <t>', 'Specify the timeout to use for all requests in ms, defaults to 3s')
   .option('-r, --retries <r>', 'Specify the number of times the program retries a failing request, defaults to 5')
   .parse(process.argv);
@@ -26,5 +27,6 @@ if (!program.args.length) {
   crawler = new SiteMapCrawler(url, program.protocol, program.timeout, outputFile);
   crawler.setInfoLevel(program.info);
   crawler.setRetries(program.retries);
+  crawler.processImages(program.images);
   crawler.proccessQueue(crawler.initialUrl);
 }

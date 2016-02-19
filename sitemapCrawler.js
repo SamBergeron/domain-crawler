@@ -12,6 +12,7 @@ var SiteMapCrawler = function(url, protocol, timeout, outputFile) {
   this.protocol = protocol;
   this.timeout = parseInt(timeout) || 3000; // 3 seconds
   this.retries = 5;
+  this.images = false;
 
   this.uriList = [];
   this.uriQueue = [];
@@ -32,6 +33,10 @@ SiteMapCrawler.prototype.setInfoLevel = function(info) {
 
 SiteMapCrawler.prototype.setRetries = function(retry) {
   this.retries = retry;
+};
+
+SiteMapCrawler.prototype.processImages = function(images) {
+  this.images = images;
 };
 
 SiteMapCrawler.prototype.crawlUrl = function(url) {
@@ -98,17 +103,19 @@ SiteMapCrawler.prototype.parseHtmlContent = function(res, body) {
     }
   });
 
-  // Do the same for all image links
-  $('img').each( function(i, elem) {
-    var img = $(elem).attr('src');
-    // Make sure the link exists and is not already in our list
-    if(img && imgList.indexOf(img) === -1) {
-      // Keep only images on our own domain
-      var imgUri = URI(img);
-      if(imgUri.is('relative'))
-        imgList.push(img);
-    }
-  });
+  // Do the same for all image links if option is on
+  if(siteMapCrawler.images) {
+    $('img').each( function(i, elem) {
+      var img = $(elem).attr('src');
+      // Make sure the link exists and is not already in our list
+      if(img && imgList.indexOf(img) === -1) {
+        // Keep only images on our own domain
+        var imgUri = URI(img);
+        if(imgUri.is('relative'))
+          imgList.push(img);
+      }
+    });
+  }
 
   // Get the uri from the origin of the response
   // This is useful if we were redirected
