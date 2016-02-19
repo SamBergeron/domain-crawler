@@ -163,48 +163,55 @@ SiteMapCrawler.prototype.retryLink = function(url) {
 SiteMapCrawler.prototype.updateUrlList = function(anchorList, originUrl, assetList) {
   var siteMapCrawler = this;
   for(var i=0; i < anchorList.length; i++) {
-    // Make new URIs from our anchor list
-    var tempUri = URI(anchorList[i]);
-    // Remove any trailing query strings
-    tempUri = tempUri.search("");
-    // Remove any trailing hashes
-    tempUri = tempUri.fragment("");
+    try {
+      // Make new URIs from our anchor list
+      var tempUri = URI(anchorList[i]);
+      // Remove any trailing query strings
+      tempUri = tempUri.search("");
+      // Remove any trailing hashes
+      tempUri = tempUri.fragment("");
 
-    if(tempUri.is('relative')) { // Ex: Relative would be "/about"
-      // Append our relative uri to our main one
-      var encodedPath = URI(tempUri.href()).pathname(true);
-      tempUri = URI(originUrl).pathname(encodedPath);
-    }
+      if(tempUri.is('url')) {
+        if(tempUri.is('relative')) { // Ex: Relative would be "/about"
+          // Append our relative uri to our main one
+          var encodedPath = URI(tempUri.href()).pathname(true);
+          //console.log(tempUri.pathname());
+          tempUri = URI(originUrl).pathname(encodedPath);
+        }
 
-    // Normalize the subdomain if not specified
-    if(tempUri.subdomain() === '') {
-      tempUri = tempUri.subdomain('www');
-    }
+        // Normalize the subdomain if not specified
+        if(tempUri.subdomain() === '') {
+          tempUri = tempUri.subdomain('www');
+        }
 
-    // Normalize the protocol
-    tempUri = tempUri.protocol(siteMapCrawler.protocol);
+        // Normalize the protocol
+        tempUri = tempUri.protocol(siteMapCrawler.protocol);
 
-    // Remove irregularities in URL (like capital letters)
-    tempUri = tempUri.normalize();
-    //tempUri = tempUri.encode();
+        // Remove irregularities in URL (like capital letters)
+        tempUri = tempUri.normalize();
+        //tempUri = tempUri.encode();
 
-    // Verify we are in the same domain
-    if(tempUri.domain() === siteMapCrawler.domain) {
-      if(siteMapCrawler.uriList.indexOf(tempUri.href()) === -1) {
-        // Then add to our uri list
-        siteMapCrawler.uriList.push(tempUri.href());
+        // Verify we are in the same domain
+        if(tempUri.domain() === siteMapCrawler.domain) {
+          if(siteMapCrawler.uriList.indexOf(tempUri.href()) === -1) {
+            // Then add to our uri list
+            siteMapCrawler.uriList.push(tempUri.href());
 
-        // Make a new object we will save for priting later
-        var uriAndAssets = {
-          url: tempUri.href(),
-          assets: assetList
-        };
-        siteMapCrawler.uriAssetsList.push(uriAndAssets);
+            // Make a new object we will save for priting later
+            var uriAndAssets = {
+              url: tempUri.href(),
+              assets: assetList
+            };
+            siteMapCrawler.uriAssetsList.push(uriAndAssets);
 
-        // Add our uris to the queue
-        siteMapCrawler.uriQueue.push(tempUri.href());
-        siteMapCrawler.crawlUrl(tempUri.href());
+            // Add our uris to the queue
+            siteMapCrawler.uriQueue.push(tempUri.href());
+            siteMapCrawler.crawlUrl(tempUri.href());
+          }
+        }
       }
+    } catch(err) {
+      console.log('\n' + err);
     }
   }
   // console.log(siteMapCrawler.uriList); // debug
