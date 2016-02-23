@@ -1,28 +1,10 @@
 # Site Map crawler
-## GoCardless interview project
 
 #### Usage:
 - Download files, make sure nodeJS is installed
 - run "npm install"
 - run "node crawl.js [url] [outputfile]"
 - run "node crawl.js --help" for options
-
-#### Where this came from
-Earlier this week I recieved directives for a programming challenge from goCardless
-> [...]<br>
-> We'd like you to write a simple web crawler, in whatever language you're most comfortable in, which given a URL to crawl, should output a site map, showing the static assets for each page.
-> [...] <br>
-> It should be limited to one domain - so when crawling gocardless.com it would crawl all pages within the gocardless.com domain, but not follow the links to our Facebook and Twitter accounts. We’ll be testing it against gocardless.com. Bonus points for making it as fast as possible!
-> [...]
-
-Initially this seemed straight-forward, though I'd never writtent anything ressembling a web crawler, I had a general idea of how one worked. I decided I had a couple of basic things to do for a program to be considered a "web crawler":
- - Pull the content from a web page given a url
- - Parse the content to find links to other urls
- - Repeat for each new url
-
-I decided that JavaScript would be the easiest for me, it's what I've been working with recently, and with NodeJS a quick working solution could be made without too much hassle (I'm by no means a Node expert though). JavaScript it was then, afterall it was made for parsing the web anyways.
-
-Normally on assignments like this one, I can ask a bunch of questions to get me started in the right direction, this time I felt a little left to my own interpretations. I decided my idea of "output a site map", would be printing a list of all valid links, ordered alphabetically, and structured so we could see a nice hierarchy. "showing the static assets for each page" was the trickiest part, after a bit of pondering, I figured it would be all endpoints reffered to by anchors, including clickable images, I would add them to the list of links.
 
 ### Design
 First off, I tried to make this application as simple and as straight-forward as possible. The __SiteMapCrawler__ class only contains 3 main functions:
